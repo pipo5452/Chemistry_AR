@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>AR Molecular Geometry</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #FB8500 0%, #FFB703 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .intro-content {
+            max-width: 500px;
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            color: #023047;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #023047;
+        }
+
+        .intro-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .marker-info {
+            background: rgba(251, 133, 0, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .marker-info p {
+            margin: 10px 0;
+            font-size: 0.95rem;
+        }
+
+        .marker-info a {
+            color: #023047;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .geometry-list {
+            text-align: left;
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+
+        .geometry-list li {
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .start-btn {
+            background: #023047;
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(2, 48, 71, 0.3);
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .start-btn:active {
+            transform: translateY(0);
+        }
+
+        #info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            max-width: 90%;
+            width: 450px;
+            z-index: 100;
+            display: none;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        #info-panel h2 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            color: #FFB703;
+        }
+
+        #info-panel .angle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            color: #FFF;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prev-btn {
+            background: #FFB703;
+            color: white;
+        }
+
+        .next-btn {
+            background: #FFB703;
+            color: white;
+        }
+
+        .nav-btn:active {
+            transform: scale(0.9);
+        }
+
+        .counter {
+            color: #FFB703;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+            z-index: 99;
+            display: none;
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 30px 50px;
+            border-radius: 15px;
+        }
+
+        #marker-status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 59, 48, 0.9);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            z-index: 98;
+            display: none;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        #marker-status.found {
+            background: rgba(52, 199, 89, 0.9);
+        }
+
+        a-scene {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="intro-screen">
+        <div class="intro-content">
+            <h1>🧪 AR Molecular Geometry</h1>
+            <p class="intro-text">Experience molecular structures in augmented reality!</p>
+            
+            <div class="marker-info">
+                <p><strong>📸 You'll need a Hiro Marker</strong></p>
+                <p>Display the <a href="https://stemkoski.github.io/AR-Examples/markers/hiro.png" target="_blank">Hiro marker</a> on another screen or print it out</p>
+            </div>
+
+            <p><strong>Geometries included:</strong></p>
+            <ul class="geometry-list">
+                <li>Linear - 180°</li>
+                <li>Trigonal Planar - 120°</li>
+                <li>T-Shaped - 90°</li>
+                <li>Square Planar - 90°</li>
+            </ul>
+            
+            <button class="start-btn" onclick="startAR()">Start AR Experience</button>
+        </div>
+    </div>
+
+    <div id="loading">
+        <div>📷 Requesting camera access...</div>
+    </div>
+
+    <div id="marker-status">Point camera at Hiro marker</div>
+
+    <div id="info-panel">
+        <h2 id="geo-name">Linear</h2>
+        <div class="angle" id="geo-angle">180°</div>
+        <div class="controls">
+            <button class="nav-btn prev-btn" onclick="previousGeometry()">◄</button>
+            <div class="counter" id="counter">1 / 4</div>
+            <button class="nav-btn next-btn" onclick="nextGeometry()">►</button>
+        </div>
+    </div>
+
+    <a-scene
+        id="ar-scene"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true;">
+        
+        <a-marker preset="hiro" id="hiro-marker">
+            <!-- Linear: 180° -->
+            <a-entity id="linear" visible="true" position="0 0 0">
+                <a-sphere position="0 0 0" radius="0.15" color="#FF0000"></a-sphere>
+                <a-sphere position="0.6 0 0" radius="0.1" color="#CCCCCC"></a-sphere>
+                <a-sphere position="-0.6 0 0" radius="0.1" color="#CCCCCC"></a-sphere>
+                <a-cylinder position="0.3 0 0" rotation="0 0 90" radius="0.025" height="0.6" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="-0.3 0 0" rotation="0 0 90" radius="0.025" height="0.6" color="#FFFFFF"></a-cylinder>
+                <a-animation attribute="rotation" dur="10000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+
+            <!-- Trigonal Planar: 120° -->
+            <a-entity id="trigonal" visible="false" position="0 0 0">
+                <a-sphere position="0 0 0" radius="0.15" color="#FF0000"></a-sphere>
+                <a-sphere position="0.5 0 0" radius="0.1" color="#CCCCCC"></a-sphere>
+                <a-sphere position="-0.25 0 0.433" radius="0.1" color="#CCCCCC"></a-sphere>
+                <a-sphere position="-0.25 0 -0.433" radius="0.1" color="#CCCCCC"></a-sphere>
+                <a-cylinder position="0.25 0 0" rotation="0 0 90" radius="0.025" height="0.5" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="-0.125 0 0.217" rotation="0 -120 90" radius="0.025" height="0.5" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="-0.125 0 -0.217" rotation="0 120 90" radius="0.025" height="0.5" color="#FFFFFF"></a-cylinder>
+                <a-animation attribute="rotation" dur="10000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+
+            <!-- T-Shaped: 90° -->
+            <a-entity id="tshaped" visible="false" position="0 0 0">
+                <a-sphere position="0 0 0" radius="0.12" color="#FF0000"></a-sphere>
+                <a-sphere position="0 0.6 0" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-sphere position="-0.6 0 0" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-sphere position="0.6 0 0" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-cylinder position="0 0.3 0" rotation="0 0 0" radius="0.025" height="0.6" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="-0.3 0 0" rotation="0 0 90" radius="0.025" height="0.6" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="0.3 0 0" rotation="0 0 90" radius="0.025" height="0.6" color="#FFFFFF"></a-cylinder>
+                <a-animation attribute="rotation" dur="10000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+
+            <!-- Square Planar: 90° -->
+            <a-entity id="square" visible="false" position="0 0 0">
+                <a-sphere position="0 0 0" radius="0.12" color="#FF0000"></a-sphere>
+                <a-sphere position="0.55 0 0" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-sphere position="0 0 0.55" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-sphere position="-0.55 0 0" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-sphere position="0 0 -0.55" radius="0.09" color="#CCCCCC"></a-sphere>
+                <a-cylinder position="0.275 0 0" rotation="0 0 90" radius="0.025" height="0.55" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="0 0 0.275" rotation="90 0 0" radius="0.025" height="0.55" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="-0.275 0 0" rotation="0 0 90" radius="0.025" height="0.55" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="0 0 -0.275" rotation="90 0 0" radius="0.025" height="0.55" color="#FFFFFF"></a-cylinder>
+                <a-animation attribute="rotation" dur="10000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        const geometries = [
+            {
+                id: 'linear',
+                name: 'Linear (1 Electron Group)',
+                angle: '180°'
+            },
+            {
+                id: 'trigonal',
+                name: 'Trigonal Planar',
+                angle: '120°'
+            },
+            {
+                id: 'tshaped',
+                name: 'T-Shaped',
+                angle: '90°'
+            },
+            {
+                id: 'square',
+                name: 'Square Planar',
+                angle: '90°'
+            }
+        ];
+
+        let currentIndex = 0;
+        let markerFound = false;
+
+        function startAR() {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('ar-scene').style.display = 'block';
+            
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('marker-status').style.display = 'block';
+                document.getElementById('info-panel').style.display = 'block';
+            }, 2000);
+        }
+
+        function updateGeometry() {
+            geometries.forEach((geo, index) => {
+                const entity = document.getElementById(geo.id);
+                if (entity) {
+                    entity.setAttribute('visible', index === currentIndex);
+                }
+            });
+
+            document.getElementById('geo-name').textContent = geometries[currentIndex].name;
+            document.getElementById('geo-angle').textContent = geometries[currentIndex].angle;
+            document.getElementById('counter').textContent = `${currentIndex + 1} / ${geometries.length}`;
+        }
+
+        function nextGeometry() {
+            currentIndex = (currentIndex + 1) % geometries.length;
+            updateGeometry();
+        }
+
+        function previousGeometry() {
+            currentIndex = (currentIndex - 1 + geometries.length) % geometries.length;
+            updateGeometry();
+        }
+
+        // Marker detection
+        document.addEventListener('DOMContentLoaded', () => {
+            const marker = document.getElementById('hiro-marker');
+            const markerStatus = document.getElementById('marker-status');
+
+            if (marker) {
+                marker.addEventListener('markerFound', () => {
+                    markerFound = true;
+                    markerStatus.textContent = '✓ Marker detected!';
+                    markerStatus.classList.add('found');
+                });
+
+                marker.addEventListener('markerLost', () => {
+                    markerFound = false;
+                    markerStatus.textContent = 'Point camera at Hiro marker';
+                    markerStatus.classList.remove('found');
+                });
+            }
+        });
+
+        // Initialize
+        updateGeometry();
+    </script>
+</body>
+</html>
